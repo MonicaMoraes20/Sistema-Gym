@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { LogIn, Dumbbell, Instagram } from 'lucide-react';
+import { LogIn, Instagram } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuthContext } from '@/contexts/SupabaseAuthContext';
 import { useNavigate } from 'react-router-dom';
 
-import fondoLogin from '@/img/fondologin.jpg'; // Imagen de fondo
+import fondoLogin from '@/img/fondologin.jpg';
+import logo from '@/img/logo.png';
 
 export function LoginForm() {
     const [email, setEmail] = useState('');
@@ -30,7 +31,6 @@ export function LoginForm() {
             const { data, error } = await signIn(email, password);
 
             if (error) {
-                // Detectamos si el error es de email o contraseña
                 if (error.message.toLowerCase().includes("email")) {
                     setErrorMessage({ email: "Correo incorrecto", password: '' });
                 } else if (error.message.toLowerCase().includes("password")) {
@@ -75,7 +75,7 @@ export function LoginForm() {
             }}
         >
             {/* Overlay semitransparente */}
-            <div className="absolute inset-0 bg-black/40"></div>
+            <div className="absolute inset-0 bg-black/30"></div>
 
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -83,31 +83,35 @@ export function LoginForm() {
                 transition={{ duration: 0.5 }}
                 className="relative w-full max-w-md"
             >
-                <Card className="glass-effect border-border">
-                    <CardHeader className="text-center">
-                        {/* Logo */}
+                <Card className="glass-effect border-border py-4 px-6">
+                    <CardHeader className="text-center space-y-2">
+                        {/* Logo más compacto */}
                         <motion.div
                             key="logo"
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                            className="mx-auto mb-4 w-16 h-16 bg-gradient-to-r from-primary to-purple-500 rounded-full flex items-center justify-center"
+                            className="mx-auto  w-40 h-25 flex items-center justify-center"
                         >
-                            <Dumbbell className="w-8 h-8 text-primary-foreground" />
+                            <img
+                                src={logo}
+                                alt="Logo"
+                                className="w-full h-full object-contain"
+                            />
                         </motion.div>
 
-                        <CardTitle className="text-2xl font-bold text-foreground">
+                        <CardTitle className="text-xl font-bold text-foreground">
                             Panel Administrativo
                         </CardTitle>
-                        <CardDescription className="text-muted-foreground">
+                        <CardDescription className="text-muted-foreground text-sm">
                             Accede al sistema de gestión del gimnasio
                         </CardDescription>
                     </CardHeader>
 
-                    <CardContent>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="email" className="text-foreground">Email</Label>
+                    <CardContent className="space-y-3">
+                        <form onSubmit={handleSubmit} className="space-y-3">
+                            <div className="space-y-1">
+                                <Label htmlFor="email" className="text-foreground text-sm">Email</Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -122,8 +126,8 @@ export function LoginForm() {
                                 )}
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="password" className="text-foreground">Contraseña</Label>
+                            <div className="space-y-1">
+                                <Label htmlFor="password" className="text-foreground text-sm">Contraseña</Label>
                                 <Input
                                     id="password"
                                     type="password"
@@ -160,8 +164,8 @@ export function LoginForm() {
                         </form>
 
                         {/* Footer */}
-                        <div className="mt-6 text-center">
-                            <p className="text-gray-400 text-sm mb-1">
+                        <div className="mt-4 text-center text-sm text-gray-400">
+                            <p className="mb-1">
                                 Desarrollado por <span className="font-semibold text-white">Nexus Uruguay</span><br/>
                                 &copy; Todos los derechos reservados
                             </p>
@@ -169,7 +173,7 @@ export function LoginForm() {
                                 href="https://www.instagram.com/nexus_uruguay?igsh=aXI5bnVkc3llYWZq&utm_source=qr"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center text-blue-400 hover:text-blue-300 text-sm font-medium mt-1"
+                                className="inline-flex items-center justify-center text-blue-400 hover:text-blue-300 font-medium mt-1"
                             >
                                 <Instagram className="w-4 h-4 mr-1" />
                                 @nexus_uruguay
