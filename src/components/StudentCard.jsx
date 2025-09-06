@@ -20,16 +20,20 @@ const diasES = {
 export function StudentCard({ student, onEdit, onDelete }) {
     const [imageError, setImageError] = useState(false);
 
-    // Función para validar si el último pago sigue vigente (+1 mes)
+    // ✅ Valida si el último pago sigue vigente (30 días)
     const isPaymentValid = (paymentDate) => {
         if (!paymentDate) return false;
         const date = new Date(paymentDate);
         const expiryDate = new Date(date);
         expiryDate.setMonth(expiryDate.getMonth() + 1);
+
+        // Ajuste para meses con menos días
         if (expiryDate.getDate() !== date.getDate()) expiryDate.setDate(0);
+
         expiryDate.setHours(23, 59, 59, 999);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+
         return today <= expiryDate;
     };
 
@@ -38,7 +42,7 @@ export function StudentCard({ student, onEdit, onDelete }) {
     const getInitials = (name, lastName) =>
         `${name?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
 
-    // Formateo de fecha sin desplazamiento por zona horaria
+    // ✅ Formatea fecha en español sin problemas de zona horaria
     const formatDate = (date) => {
         if (!date) return 'No registrado';
         const d = new Date(date);
@@ -53,9 +57,12 @@ export function StudentCard({ student, onEdit, onDelete }) {
         return `${weekdays[weekday]}, ${day} de ${months[month]} de ${year}`;
     };
 
+    // ✅ Traducción y formateo de horarios
     const formatSchedule = (schedule) => {
         if (!schedule) return 'Sin horario';
-        if (Array.isArray(schedule)) return schedule.map(d => diasES[d.trim().toLowerCase()] || d).join(', ');
+        if (Array.isArray(schedule)) {
+            return schedule.map(d => diasES[d.trim().toLowerCase()] || d).join(', ');
+        }
         if (typeof schedule === 'string') {
             const [daysPart, hoursPart] = schedule.split(' ').reduce(
                 (acc, curr) => {
@@ -78,8 +85,14 @@ export function StudentCard({ student, onEdit, onDelete }) {
     };
 
     return (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -5 }} className="relative">
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ y: -5 }}
+            className="relative"
+        >
             <Card className="glass-effect border-border card-hover overflow-hidden">
+                {/* 🔴 Muestra alerta si el pago está vencido */}
                 {isOverdue && (
                     <div className="absolute top-2 right-2 z-10">
                         <Badge variant="destructive" className="alert-pulse">
@@ -152,6 +165,7 @@ export function StudentCard({ student, onEdit, onDelete }) {
                         </div>
                     )}
 
+                    {/* ✅ Último pago siempre calculado desde payments */}
                     <div className="text-xs text-muted-foreground">
                         <strong>Último pago:</strong> {formatDate(student.last_payment)}
                     </div>
@@ -161,10 +175,20 @@ export function StudentCard({ student, onEdit, onDelete }) {
                     </div>
 
                     <div className="flex space-x-2 pt-2">
-                        <Button size="sm" variant="outline" onClick={() => onEdit(student)} className="flex-1">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onEdit(student)}
+                            className="flex-1"
+                        >
                             <Edit className="w-4 h-4 mr-1" /> Editar
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={() => onDelete(student.id)} className="flex-1">
+                        <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => onDelete(student.id)}
+                            className="flex-1"
+                        >
                             <Trash2 className="w-4 h-4 mr-1" /> Eliminar
                         </Button>
                     </div>

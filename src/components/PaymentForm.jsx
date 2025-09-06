@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,15 @@ export function PaymentForm({ isOpen, onClose, onSave, students }) {
     const [amount, setAmount] = useState('');
     const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
     const [currentWeight, setCurrentWeight] = useState('');
+    const [selectedStudentName, setSelectedStudentName] = useState('');
     const { toast } = useToast();
+
+    useEffect(() => {
+        const selectedStudent = students.find(s => s.id === studentId);
+        if (selectedStudent) {
+            setSelectedStudentName(`${selectedStudent.name} ${selectedStudent.last_name || selectedStudent.lastName}`);
+        }
+    }, [studentId, students]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -31,11 +39,11 @@ export function PaymentForm({ isOpen, onClose, onSave, students }) {
             currentWeight: currentWeight ? parseFloat(currentWeight) : null
         });
 
-        // Reset fields
         setStudentId('');
         setAmount('');
         setPaymentDate(new Date().toISOString().slice(0, 10));
         setCurrentWeight('');
+        setSelectedStudentName('');
         onClose();
     };
 
@@ -50,11 +58,17 @@ export function PaymentForm({ isOpen, onClose, onSave, students }) {
                         <Label>Alumno</Label>
                         <Select value={studentId} onValueChange={setStudentId}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Selecciona un alumno" />
+                                <SelectValue placeholder="Selecciona un alumno">
+                                    {selectedStudentName || 'Selecciona un alumno'}
+                                </SelectValue>
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-gray-800 text-white rounded-md shadow-lg">
                                 {students.map((student) => (
-                                    <SelectItem key={student.id} value={student.id}>
+                                    <SelectItem
+                                        key={student.id}
+                                        value={student.id}
+                                        className="hover:bg-gray-700 data-[state=checked]:bg-gray-700"
+                                    >
                                         {student.name} {student.last_name || student.lastName}
                                     </SelectItem>
                                 ))}

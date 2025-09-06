@@ -45,19 +45,19 @@ export function Dashboard({ onLogout }) {
     // --- Fetch ---
     const fetchStudents = async () => {
         const { data, error } = await supabase.from('students').select('*');
-        if (error) console.error(error);
+        if (error) console.error("fetchStudents:", error);
         else setStudents(data || []);
     };
 
     const fetchPayments = async () => {
         const { data, error } = await supabase.from('payments').select('*');
-        if (error) console.error(error);
+        if (error) console.error("fetchPayments:", error);
         else setPayments(data || []);
     };
 
     const fetchSchedules = async () => {
         const { data, error } = await supabase.from('schedules').select('*');
-        if (error) console.error(error);
+        if (error) console.error("fetchSchedules:", error);
         else {
             const normalized = (data || []).map(s => ({
                 ...s,
@@ -72,20 +72,26 @@ export function Dashboard({ onLogout }) {
     // --- Helpers ---
     const sameId = (a, b) => String(a) === String(b);
 
+    // Devuelve el payment_date (string) del último pago para un alumno, o null
     const getLastPaymentDate = (studentId) => {
         const studentPayments = payments.filter(p => sameId(p.student_id, studentId));
         if (!studentPayments.length) return null;
-        const latest = studentPayments
-            .map(p => new Date(p.payment_date))
-            .reduce((max, d) => (d > max ? d : max), new Date(studentPayments[0].payment_date));
-        return latest;
+
+        const latest = studentPayments.reduce((latestSoFar, p) => {
+            return new Date(p.payment_date) > new Date(latestSoFar.payment_date) ? p : latestSoFar;
+        }, studentPayments[0]);
+
+        // devolver la cadena original (o conviértelo si necesitas formato)
+        return latest.payment_date || null;
     };
 
+    // 🔹 Decorar alumnos con el último pago calculado desde payments (propiedad: last_payment)
     const decoratedStudents = useMemo(() => {
         return students.map(s => ({
             ...s,
             lastName: s.last_name ?? s.lastName ?? '',
-            lastPaymentDate: getLastPaymentDate(s.id)
+            // <-- IMPORTANTE: usamos `last_payment` (snake_case) porque StudentCard y Statistics lo esperan
+            last_payment: getLastPaymentDate(s.id)
         }));
     }, [students, payments]);
 
@@ -163,18 +169,27 @@ export function Dashboard({ onLogout }) {
 
     const handleSavePayment = async (paymentData) => {
         try {
-            const { error: paymentError } = await supabase
+            // Insertar y devolver el registro insertado
+            const { data, error: paymentError } = await supabase
                 .from("payments")
                 .insert([{
                     student_id: paymentData.studentId,
                     amount: paymentData.amount,
                     payment_date: paymentData.paymentDate,
                     current_weight: paymentData.currentWeight || null,
-                }]);
+                }])
+                .select();
 
             if (paymentError) throw paymentError;
+
+            toast({ title: "Pago registrado", description: "Pago guardado correctamente." });
+
+            // Fuerza refrescar payments (por si realtime tarda)
+            await fetchPayments();
+
         } catch (err) {
-            toast({ title: "Error", description: err.message, variant: "destructive" });
+            console.error("handleSavePayment error:", err);
+            toast({ title: "Error", description: err.message || "No se pudo guardar el pago", variant: "destructive" });
         }
     };
 
@@ -279,7 +294,7 @@ export function Dashboard({ onLogout }) {
                         {activeTab === "payments" && (
                             <motion.div key="payments" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
                                 <PaymentsTab
-                                    students={students}
+                                    students={decoratedStudents} // recibien alumnos con last_payment
                                     payments={payments}
                                     onNewPayment={() => setShowPaymentForm(true)}
                                     onCalculateIncome={calculateMonthlyIncome}
@@ -292,7 +307,7 @@ export function Dashboard({ onLogout }) {
                             <motion.div key="schedules" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
                                 <SchedulesTab
                                     schedules={schedules}
-                                    students={students}
+                                    students={decoratedStudents}
                                     onNewSchedule={() => { setEditingSchedule(null); setShowScheduleForm(true); }}
                                     onEditSchedule={handleEditSchedule}
                                     onDeleteSchedule={handleDeleteSchedule}
@@ -302,7 +317,7 @@ export function Dashboard({ onLogout }) {
 
                         {activeTab === "calendar" && (
                             <motion.div key="calendar" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
-                                <CalendarTab schedules={schedules} students={students} />
+                                <CalendarTab schedules={schedules} students={decoratedStudents} />
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -321,7 +336,7 @@ export function Dashboard({ onLogout }) {
                 isOpen={showPaymentForm}
                 onClose={() => setShowPaymentForm(false)}
                 onSave={handleSavePayment}
-                students={students}
+                students={decoratedStudents} // actualizado
             />
 
             <ScheduleForm

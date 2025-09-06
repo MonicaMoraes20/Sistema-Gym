@@ -15,7 +15,7 @@ export function Statistics({ students = [], payments = [] }) {
 
     const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
-    // Filtra pagos por mes y año seleccionados
+    // 🔹 Filtra pagos por mes y año seleccionados
     const filteredPayments = useMemo(() => {
         return payments.filter(payment => {
             const paymentDate = new Date(payment.payment_date);
@@ -23,39 +23,47 @@ export function Statistics({ students = [], payments = [] }) {
         });
     }, [payments, selectedMonth, selectedYear]);
 
-    // Total de ingresos del mes
+    // 🔹 Total de ingresos del mes
     const monthlyIncome = filteredPayments.reduce((total, p) => total + p.amount, 0);
 
-    // Chequea si un pago sigue vigente (1 mes de validez)
+    // 🔹 Chequea si un pago sigue vigente (1 mes de validez, con ajuste de fechas)
     const isPaymentValid = (lastPaymentDate) => {
         if (!lastPaymentDate) return false;
-        const paymentDate = new Date(lastPaymentDate);
-        const expiry = new Date(paymentDate);
+        const date = new Date(lastPaymentDate);
+        const expiry = new Date(date);
         expiry.setMonth(expiry.getMonth() + 1);
-        expiry.setHours(23, 59, 59, 999);
 
+        // Ajuste para meses con menos días
+        if (expiry.getDate() !== date.getDate()) expiry.setDate(0);
+
+        expiry.setHours(23, 59, 59, 999);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         return today <= expiry;
     };
 
+    // 🔹 Cálculos principales
     const activeStudents = students.filter(s => isPaymentValid(s.last_payment)).length;
     const overduePayments = students.filter(s => !isPaymentValid(s.last_payment)).length;
     const studentsWithPathologies = students.filter(s => s.pathology && s.pathology.trim() !== '').length;
 
-    // Evolución de peso
+    // 🔹 Evolución de peso
     const weightEvolution = students.map(student => {
         const studentPayments = payments
             .filter(p => p.student_id === student.id && p.currentWeight)
             .sort((a, b) => new Date(a.payment_date) - new Date(b.payment_date));
 
         const initialWeight = parseFloat(student.initial_weight) || 0;
-        const currentWeight = studentPayments.length > 0 ? studentPayments[studentPayments.length - 1].currentWeight : initialWeight;
+        const currentWeight =
+            studentPayments.length > 0
+                ? studentPayments[studentPayments.length - 1].currentWeight
+                : initialWeight;
+
         const weightChange = currentWeight - initialWeight;
 
         return {
-            name: `${student.name} ${student.last_name}`,
+            name: `${student.name} ${student.lastName}`,
             initialWeight,
             currentWeight,
             weightChange
@@ -95,6 +103,7 @@ export function Statistics({ students = [], payments = [] }) {
 
     return (
         <div className="space-y-6">
+            {/* 🔹 Filtros */}
             <Card className="glass-effect border-border">
                 <CardHeader>
                     <CardTitle className="text-foreground flex items-center">
@@ -134,9 +143,15 @@ export function Statistics({ students = [], payments = [] }) {
                 </CardContent>
             </Card>
 
+            {/* 🔹 Tarjetas de estadísticas */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((stat, index) => (
-                    <motion.div key={stat.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
+                    <motion.div
+                        key={stat.title}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                    >
                         <Card className="glass-effect border-border card-hover">
                             <CardContent className="p-6 flex items-center justify-between">
                                 <div>
@@ -153,6 +168,7 @@ export function Statistics({ students = [], payments = [] }) {
                 ))}
             </div>
 
+            {/* 🔹 Evolución de peso */}
             {weightEvolution.length > 0 && (
                 <Card className="glass-effect border-border">
                     <CardHeader>
@@ -173,15 +189,19 @@ export function Statistics({ students = [], payments = [] }) {
                                 >
                                     <div>
                                         <p className="text-foreground font-medium">{student.name}</p>
-                                        <p className="text-muted-foreground text-sm">{student.initialWeight}kg → {student.currentWeight}kg</p>
+                                        <p className="text-muted-foreground text-sm">
+                                            {student.initialWeight}kg → {student.currentWeight}kg
+                                        </p>
                                     </div>
-                                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                        student.weightChange > 0
-                                            ? 'bg-green-500/20 text-green-300'
-                                            : student.weightChange < 0
-                                                ? 'bg-red-500/20 text-red-300'
-                                                : 'bg-gray-500/20 text-gray-300'
-                                    }`}>
+                                    <div
+                                        className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                            student.weightChange > 0
+                                                ? 'bg-green-500/20 text-green-300'
+                                                : student.weightChange < 0
+                                                    ? 'bg-red-500/20 text-red-300'
+                                                    : 'bg-gray-500/20 text-gray-300'
+                                        }`}
+                                    >
                                         {student.weightChange > 0 ? '+' : ''}{student.weightChange.toFixed(1)}kg
                                     </div>
                                 </motion.div>
