@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { LogIn, Dumbbell } from 'lucide-react';
+import { LogIn, Dumbbell, Instagram } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,7 @@ export function LoginForm() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState({ email: '', password: '' });
 
     const { signIn } = useAuthContext();
     const { toast } = useToast();
@@ -23,16 +24,24 @@ export function LoginForm() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
+        setErrorMessage({ email: '', password: '' });
 
         try {
             const { data, error } = await signIn(email, password);
 
             if (error) {
-                toast({
-                    title: "Error",
-                    description: error.message,
-                    variant: "destructive",
-                });
+                // Detectamos si el error es de email o contraseña
+                if (error.message.toLowerCase().includes("email")) {
+                    setErrorMessage({ email: "Correo incorrecto", password: '' });
+                } else if (error.message.toLowerCase().includes("password")) {
+                    setErrorMessage({ email: '', password: "Contraseña incorrecta" });
+                } else {
+                    toast({
+                        title: "Error",
+                        description: error.message,
+                        variant: "destructive",
+                    });
+                }
                 setIsLoading(false);
                 return;
             }
@@ -60,12 +69,12 @@ export function LoginForm() {
             className="min-h-screen flex items-center justify-center p-4 relative"
             style={{
                 backgroundImage: `url(${fondoLogin})`,
-                backgroundSize: 'cover',      // Ajusta la imagen para cubrir el área
-                backgroundPosition: 'center', // Centra la imagen
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
             }}
         >
-            {/* Overlay semitransparente para mejorar visibilidad */}
+            {/* Overlay semitransparente */}
             <div className="absolute inset-0 bg-black/40"></div>
 
             <motion.div
@@ -76,7 +85,7 @@ export function LoginForm() {
             >
                 <Card className="glass-effect border-border">
                     <CardHeader className="text-center">
-                        {/* Icono de mancuernas */}
+                        {/* Logo */}
                         <motion.div
                             key="logo"
                             initial={{ scale: 0 }}
@@ -87,7 +96,9 @@ export function LoginForm() {
                             <Dumbbell className="w-8 h-8 text-primary-foreground" />
                         </motion.div>
 
-                        <CardTitle className="text-2xl font-bold text-foreground">Panel Administrativo</CardTitle>
+                        <CardTitle className="text-2xl font-bold text-foreground">
+                            Panel Administrativo
+                        </CardTitle>
                         <CardDescription className="text-muted-foreground">
                             Accede al sistema de gestión del gimnasio
                         </CardDescription>
@@ -106,6 +117,9 @@ export function LoginForm() {
                                     className="bg-secondary border-border text-foreground placeholder:text-muted-foreground"
                                     required
                                 />
+                                {errorMessage.email && (
+                                    <p className="text-red-500 text-xs mt-1">{errorMessage.email}</p>
+                                )}
                             </div>
 
                             <div className="space-y-2">
@@ -119,6 +133,9 @@ export function LoginForm() {
                                     className="bg-secondary border-border text-foreground placeholder:text-muted-foreground"
                                     required
                                 />
+                                {errorMessage.password && (
+                                    <p className="text-red-500 text-xs mt-1">{errorMessage.password}</p>
+                                )}
                             </div>
 
                             <Button
@@ -141,6 +158,23 @@ export function LoginForm() {
                                 )}
                             </Button>
                         </form>
+
+                        {/* Footer */}
+                        <div className="mt-6 text-center">
+                            <p className="text-gray-400 text-sm mb-1">
+                                Desarrollado por <span className="font-semibold text-white">Nexus Uruguay</span><br/>
+                                &copy; Todos los derechos reservados
+                            </p>
+                            <a
+                                href="https://www.instagram.com/nexus_uruguay?igsh=aXI5bnVkc3llYWZq&utm_source=qr"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center text-blue-400 hover:text-blue-300 text-sm font-medium mt-1"
+                            >
+                                <Instagram className="w-4 h-4 mr-1" />
+                                @nexus_uruguay
+                            </a>
+                        </div>
                     </CardContent>
                 </Card>
             </motion.div>
