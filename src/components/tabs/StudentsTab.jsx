@@ -4,7 +4,7 @@ import { Users, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StudentCard } from '@/components/StudentCard';
 
-export function StudentsTab({ students, onNewStudent, onEditStudent, onDeleteStudent }) {
+export function StudentsTab({ students, onNewStudent, onEditStudent, onDeleteStudent, onToggleActive }) {
     const [search, setSearch] = useState('');
 
     // Filtra alumnos por búsqueda
@@ -95,6 +95,7 @@ export function StudentsTab({ students, onNewStudent, onEditStudent, onDeleteStu
                                     student={student}
                                     onEdit={onEditStudent}
                                     onDelete={onDeleteStudent}
+                                    onToggleActive={onToggleActive} // 🔹 Nueva prop para activar/desactivar
                                 />
                             </motion.div>
                         ))}

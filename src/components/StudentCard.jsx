@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Edit, Trash2, Calendar, AlertTriangle, Phone, Heart } from 'lucide-react';
+import { Edit, Trash2, Calendar, AlertTriangle, Phone, Heart, Power } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -17,7 +17,7 @@ const diasES = {
     sunday: "Domingo", sun: "Domingo"
 };
 
-export function StudentCard({ student, onEdit, onDelete }) {
+export function StudentCard({ student, onEdit, onDelete, onToggleActive }) {
     const [imageError, setImageError] = useState(false);
 
     // ✅ Valida si el último pago sigue vigente (30 días)
@@ -38,7 +38,6 @@ export function StudentCard({ student, onEdit, onDelete }) {
     };
 
     const isOverdue = !isPaymentValid(student.last_payment);
-
     const getInitials = (name, lastName) =>
         `${name?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
 
@@ -92,8 +91,8 @@ export function StudentCard({ student, onEdit, onDelete }) {
             className="relative"
         >
             <Card className="glass-effect border-border card-hover overflow-hidden">
-                {/* 🔴 Muestra alerta si el pago está vencido */}
-                {isOverdue && (
+                {/* 🔴 Muestra alerta solo si el pago está vencido y el alumno está activo */}
+                {student.is_active && isOverdue && (
                     <div className="absolute top-2 right-2 z-10">
                         <Badge variant="destructive" className="alert-pulse">
                             <AlertTriangle className="w-3 h-3 mr-1" />
@@ -126,6 +125,11 @@ export function StudentCard({ student, onEdit, onDelete }) {
                             <div className="flex items-center space-x-2 mt-1">
                                 <Badge variant="secondary" className="text-xs">{student.modality || 'Grupal'}</Badge>
                                 <span className="text-muted-foreground text-sm">{student.age} años</span>
+                                {!student.is_active && (
+                                    <Badge variant="outline" className="text-red-500 border-red-500">
+                                        Inactivo
+                                    </Badge>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -175,6 +179,15 @@ export function StudentCard({ student, onEdit, onDelete }) {
                     </div>
 
                     <div className="flex space-x-2 pt-2">
+                        <Button
+                            size="sm"
+                            variant={student.is_active ? "secondary" : "default"}
+                            onClick={() => onToggleActive(student)}
+                            className="flex-1"
+                        >
+                            <Power className="w-4 h-4 mr-1" />
+                            {student.is_active ? "Desactivar" : "Activar"}
+                        </Button>
                         <Button
                             size="sm"
                             variant="outline"

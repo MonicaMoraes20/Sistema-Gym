@@ -37,8 +37,9 @@ export function SchedulesTab({ schedules, students, onNewSchedule, onEditSchedul
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <AnimatePresence>
                     {schedules.map((schedule) => {
+                        // ✅ Solo contar alumnos activos
                         const studentsInSchedule = students.filter(student =>
-                            student.schedule && student.schedule.includes(`${schedule.startTime}-${schedule.endTime}`)
+                            student.is_active && student.schedule && student.schedule.includes(`${schedule.startTime}-${schedule.endTime}`)
                         ).length;
 
                         return (

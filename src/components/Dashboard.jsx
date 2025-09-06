@@ -33,10 +33,7 @@ export function Dashboard({ onLogout }) {
     useEffect(() => {
         const getUser = async () => {
             const { data: { user }, error } = await supabase.auth.getUser();
-            if (error) {
-                console.error("❌ Error obteniendo usuario:", error);
-                return;
-            }
+            if (error) return console.error("❌ Error obteniendo usuario:", error);
             if (user) setUserId(user.id);
         };
         getUser();
@@ -45,20 +42,19 @@ export function Dashboard({ onLogout }) {
     // --- Fetch ---
     const fetchStudents = async () => {
         const { data, error } = await supabase.from('students').select('*');
-        if (error) console.error("fetchStudents:", error);
-        else setStudents(data || []);
+        if (!error) setStudents(data || []);
+        else console.error("fetchStudents:", error);
     };
 
     const fetchPayments = async () => {
         const { data, error } = await supabase.from('payments').select('*');
-        if (error) console.error("fetchPayments:", error);
-        else setPayments(data || []);
+        if (!error) setPayments(data || []);
+        else console.error("fetchPayments:", error);
     };
 
     const fetchSchedules = async () => {
         const { data, error } = await supabase.from('schedules').select('*');
-        if (error) console.error("fetchSchedules:", error);
-        else {
+        if (!error) {
             const normalized = (data || []).map(s => ({
                 ...s,
                 startTime: s.start_time,
@@ -66,13 +62,12 @@ export function Dashboard({ onLogout }) {
                 maxCapacity: s.max_capacity
             }));
             setSchedules(normalized);
-        }
+        } else console.error("fetchSchedules:", error);
     };
 
     // --- Helpers ---
     const sameId = (a, b) => String(a) === String(b);
 
-    // Devuelve el payment_date (string) del último pago para un alumno, o null
     const getLastPaymentDate = (studentId) => {
         const studentPayments = payments.filter(p => sameId(p.student_id, studentId));
         if (!studentPayments.length) return null;
@@ -81,26 +76,31 @@ export function Dashboard({ onLogout }) {
             return new Date(p.payment_date) > new Date(latestSoFar.payment_date) ? p : latestSoFar;
         }, studentPayments[0]);
 
-        // devolver la cadena original (o conviértelo si necesitas formato)
         return latest.payment_date || null;
     };
 
-    // 🔹 Decorar alumnos con el último pago calculado desde payments (propiedad: last_payment)
+    // 🔹 Decorar alumnos con el último pago
     const decoratedStudents = useMemo(() => {
         return students.map(s => ({
             ...s,
             lastName: s.last_name ?? s.lastName ?? '',
-            // <-- IMPORTANTE: usamos `last_payment` (snake_case) porque StudentCard y Statistics lo esperan
             last_payment: getLastPaymentDate(s.id)
         }));
     }, [students, payments]);
 
+    // --- Mantener pagos únicos por id ---
+    const uniquePayments = useMemo(() => {
+        const map = new Map();
+        payments.forEach(p => map.set(p.id, p));
+        return Array.from(map.values());
+    }, [payments]);
+
+    // --- Realtime ---
     useEffect(() => {
         fetchStudents();
         fetchPayments();
         fetchSchedules();
 
-        // --- Realtime ---
         const studentsChannel = supabase
             .channel('public:students')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, payload => {
@@ -169,8 +169,7 @@ export function Dashboard({ onLogout }) {
 
     const handleSavePayment = async (paymentData) => {
         try {
-            // Insertar y devolver el registro insertado
-            const { data, error: paymentError } = await supabase
+            const { data, error } = await supabase
                 .from("payments")
                 .insert([{
                     student_id: paymentData.studentId,
@@ -180,13 +179,9 @@ export function Dashboard({ onLogout }) {
                 }])
                 .select();
 
-            if (paymentError) throw paymentError;
+            if (error) throw error;
 
             toast({ title: "Pago registrado", description: "Pago guardado correctamente." });
-
-            // Fuerza refrescar payments (por si realtime tarda)
-            await fetchPayments();
-
         } catch (err) {
             console.error("handleSavePayment error:", err);
             toast({ title: "Error", description: err.message || "No se pudo guardar el pago", variant: "destructive" });
@@ -204,7 +199,6 @@ export function Dashboard({ onLogout }) {
                     max_capacity: scheduleData.maxCapacity,
                     description: scheduleData.description
                 }).eq('id', scheduleData.id);
-
                 if (error) throw error;
                 toast({ title: "Horario actualizado correctamente" });
             } else {
@@ -216,14 +210,11 @@ export function Dashboard({ onLogout }) {
                     max_capacity: scheduleData.maxCapacity,
                     description: scheduleData.description
                 }]);
-
                 if (error) throw error;
                 toast({ title: "Horario creado correctamente" });
             }
-
             setEditingSchedule(null);
             setShowScheduleForm(false);
-
         } catch (err) {
             toast({ title: "Error", description: err.message, variant: "destructive" });
         }
@@ -244,7 +235,7 @@ export function Dashboard({ onLogout }) {
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
 
-        const monthlyPayments = payments.filter(payment => {
+        const monthlyPayments = uniquePayments.filter(payment => {
             const paymentDate = new Date(payment.payment_date);
             return paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear;
         });
@@ -255,6 +246,20 @@ export function Dashboard({ onLogout }) {
             title: "Ingresos del mes",
             description: `Total: $${total.toLocaleString()} (${monthlyPayments.length} pagos)`,
         });
+    };
+
+    // --- NUEVO: Activar / Desactivar alumno ---
+    const handleToggleActive = async (student) => {
+        try {
+            const { error } = await supabase
+                .from('students')
+                .update({ is_active: !student.is_active })
+                .eq('id', student.id);
+            if (error) throw error;
+            toast({ title: `Alumno ${student.is_active ? "desactivado" : "activado"}` });
+        } catch (err) {
+            toast({ title: "Error", description: err.message, variant: "destructive" });
+        }
     };
 
     // --- Render ---
@@ -287,6 +292,7 @@ export function Dashboard({ onLogout }) {
                                     onNewStudent={() => { setEditingStudent(null); setShowStudentForm(true); }}
                                     onEditStudent={handleEditStudent}
                                     onDeleteStudent={handleDeleteStudent}
+                                    onToggleActive={handleToggleActive} // 🔹 Pasamos la función aquí
                                 />
                             </motion.div>
                         )}
@@ -294,8 +300,8 @@ export function Dashboard({ onLogout }) {
                         {activeTab === "payments" && (
                             <motion.div key="payments" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
                                 <PaymentsTab
-                                    students={decoratedStudents} // recibien alumnos con last_payment
-                                    payments={payments}
+                                    students={decoratedStudents}
+                                    payments={uniquePayments}
                                     onNewPayment={() => setShowPaymentForm(true)}
                                     onCalculateIncome={calculateMonthlyIncome}
                                     onNavigateToStudents={() => setActiveTab('students')}
@@ -336,7 +342,7 @@ export function Dashboard({ onLogout }) {
                 isOpen={showPaymentForm}
                 onClose={() => setShowPaymentForm(false)}
                 onSave={handleSavePayment}
-                students={decoratedStudents} // actualizado
+                students={decoratedStudents}
             />
 
             <ScheduleForm
